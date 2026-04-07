@@ -1,0 +1,473 @@
+import React, { useState } from 'react';
+import { User, BookOpen, CheckCircle2, XCircle, ChevronRight, Trophy, RefreshCw, Lightbulb, ClipboardList, Send } from 'lucide-react';
+
+// Konfigurasi Google Form (Ganti dengan ID form dan Entry ID milikmu)
+const GOOGLE_FORM_CONFIG = {
+  formId: "", // Masukkan ID Google Form di sini
+  entryIds: {
+    nama: "entry.123456789", // Contoh Entry ID untuk Nama
+    skor: "entry.987654321", // Contoh Entry ID untuk Skor
+    jawaban: "entry.555666777" // Contoh Entry ID untuk Detail Jawaban
+  }
+};
+
+const QUESTION_BANK = [
+  {
+    id: 1,
+    category: "Aljabar",
+    question: "Jika x + (1/x) = 3, maka nilai dari x² + (1/x²) adalah...",
+    options: ["7", "9", "11", "47"],
+    correctAnswer: "7",
+    solution: "Kuadratkan kedua ruas: (x + 1/x)² = 3². Hasilnya x² + 2(x)(1/x) + (1/x²) = 9. Karena 2(x)(1/x) = 2, maka x² + 2 + (1/x²) = 9. Jadi x² + (1/x²) = 9 - 2 = 7."
+  },
+  {
+    id: 2,
+    category: "Teori Bilangan",
+    question: "Berapa banyak bilangan bulat positif n sehingga (n + 3) habis membagi (n² + 7)?",
+    options: ["2", "3", "4", "5"],
+    correctAnswer: "3",
+    solution: "n² + 7 dapat ditulis (n² - 9) + 16 = (n - 3)(n + 3) + 16. Agar n + 3 membagi n² + 7, maka n + 3 harus membagi 16. Faktor dari 16 yang lebih besar dari 3 (karena n positif) adalah 4, 8, dan 16. Maka n adalah 1, 5, dan 13. Ada 3 nilai."
+  },
+  {
+    id: 3,
+    category: "Geometri",
+    question: "Sebuah segitiga memiliki sisi 13, 14, dan 15. Berapakah luas segitiga tersebut?",
+    options: ["42", "84", "90", "105"],
+    correctAnswer: "84",
+    solution: "Gunakan rumus Heron. Setengah keliling (s) = (13+14+15)/2 = 21. Luas = akar(21 * (21-13) * (21-14) * (21-15)) = akar(21 * 8 * 7 * 6) = akar(7056) = 84."
+  },
+  {
+    id: 4,
+    category: "Kombinatorika",
+    question: "Banyaknya cara menyusun angka 1, 2, 3, 4, 5 tanpa pengulangan sehingga angka 2 dan 3 selalu berdampingan adalah...",
+    options: ["24", "48", "60", "120"],
+    correctAnswer: "48",
+    solution: "Anggap (2,3) sebagai satu paket. Maka ada 4 paket yang disusun (paket 23, 1, 4, 5). Banyak cara = 4! = 24. Karena di dalam paket 2 dan 3 bisa bertukar tempat (23 atau 32), dikali 2. Jadi 24 * 2 = 48."
+  },
+  {
+    id: 5,
+    category: "Logika",
+    question: "Jika hari ini Senin, hari apakah 2025 hari yang lalu?",
+    options: ["Sabtu", "Minggu", "Senin", "Selasa"],
+    correctAnswer: "Sabtu",
+    solution: "2025 dibagi 7 bersisa 2 (2025 = 7 * 289 + 2). Maka 2025 hari yang lalu sama dengan 2 hari sebelum Senin, yaitu Sabtu."
+  },
+  {
+    id: 6,
+    category: "Aljabar",
+    question: "Jika f(x) = 2x + 3 dan g(x) = x² - 1, maka nilai f(g(2)) adalah...",
+    options: ["3", "5", "9", "11"],
+    correctAnswer: "9",
+    solution: "Hitung g(2) dulu: 2² - 1 = 4 - 1 = 3. Masukkan ke f(x): f(3) = 2(3) + 3 = 6 + 3 = 9."
+  },
+  {
+    id: 7,
+    category: "Teori Bilangan",
+    question: "Digit terakhir dari 3 pangkat 2024 adalah...",
+    options: ["1", "3", "7", "9"],
+    correctAnswer: "1",
+    solution: "Pola digit terakhir 3^n: 3, 9, 7, 1 (berulang setiap 4 kali). Karena 2024 habis dibagi 4, maka digit terakhirnya sama dengan urutan ke-4, yaitu 1."
+  },
+  {
+    id: 8,
+    category: "Geometri",
+    question: "Jumlah sudut dalam suatu segi-6 beraturan adalah...",
+    options: ["360 derajat", "540 derajat", "720 derajat", "900 derajat"],
+    correctAnswer: "720 derajat",
+    solution: "Rumus jumlah sudut dalam segi-n adalah (n - 2) * 180. Untuk segi-6: (6 - 2) * 180 = 4 * 180 = 720 derajat."
+  },
+  {
+    id: 9,
+    category: "Kombinatorika",
+    question: "Berapa banyak jabat tangan yang terjadi dalam sebuah ruangan berisi 10 orang jika setiap orang berjabat tangan satu kali?",
+    options: ["10", "20", "45", "90"],
+    correctAnswer: "45",
+    solution: "Gunakan kombinasi 2 dari 10: 10C2 = (10 * 9) / 2 = 45."
+  },
+  {
+    id: 10,
+    category: "Aljabar",
+    question: "Jika akar(x + 4) = 4, maka nilai x adalah...",
+    options: ["2", "4", "12", "14"],
+    correctAnswer: "12",
+    solution: "Kuadratkan kedua ruas: x + 4 = 4² -> x + 4 = 16 -> x = 16 - 4 = 12."
+  },
+  {
+    id: 11,
+    category: "Teori Bilangan",
+    question: "FPB dari 72 dan 120 adalah...",
+    options: ["12", "24", "36", "48"],
+    correctAnswer: "24",
+    solution: "Faktor 72: 1, 2, 3, 4, 6, 8, 9, 12, 18, 24, 36, 72. Faktor 120: ..., 12, 20, 24, 30, 40, 60, 120. Faktor persekutuan terbesar adalah 24."
+  },
+  {
+    id: 12,
+    category: "Geometri",
+    question: "Sebuah lingkaran memiliki luas 154 cm². Berapakah kelilingnya? (Gunakan pi = 22/7)",
+    options: ["22 cm", "44 cm", "66 cm", "88 cm"],
+    correctAnswer: "44 cm",
+    solution: "Luas = pi * r² -> 154 = (22/7) * r² -> r² = 49 -> r = 7. Keliling = 2 * pi * r = 2 * (22/7) * 7 = 44 cm."
+  },
+  {
+    id: 13,
+    category: "Aljabar",
+    question: "Jika a + b = 5 dan ab = 6, maka nilai a² + b² adalah...",
+    options: ["13", "19", "25", "37"],
+    correctAnswer: "13",
+    solution: "a² + b² = (a + b)² - 2ab = 5² - 2(6) = 25 - 12 = 13."
+  },
+  {
+    id: 14,
+    category: "Kombinatorika",
+    question: "Dari angka 1, 2, 3, 4, akan dibentuk bilangan 2 angka berbeda. Berapa banyak bilangan yang lebih besar dari 20?",
+    options: ["6", "9", "12", "16"],
+    correctAnswer: "9",
+    solution: "Angka pertama bisa 2, 3, atau 4 (3 pilihan). Setiap pilihan angka pertama memiliki 3 sisa angka untuk posisi kedua. Total = 3 * 3 = 9."
+  },
+  {
+    id: 15,
+    category: "Teori Bilangan",
+    question: "Berapa jumlah dari 10 bilangan asli pertama?",
+    options: ["45", "50", "55", "60"],
+    correctAnswer: "55",
+    solution: "Rumus jumlah n bilangan pertama: n(n+1)/2 = 10(11)/2 = 55."
+  },
+  {
+    id: 16,
+    category: "Geometri",
+    question: "Sebuah kubus memiliki panjang diagonal ruang akar(27). Berapakah volumenya?",
+    options: ["9", "27", "64", "81"],
+    correctAnswer: "27",
+    solution: "Diagonal ruang kubus = s * akar(3). Maka s * akar(3) = akar(27) = 3 * akar(3). Jadi sisi = 3. Volume = s³ = 27."
+  },
+  {
+    id: 17,
+    category: "Aljabar",
+    question: "Suku ke-10 dari barisan aritmatika 3, 7, 11, 15, ... adalah...",
+    options: ["36", "39", "40", "43"],
+    correctAnswer: "39",
+    solution: "Rumus: a + (n-1)b = 3 + (9 * 4) = 3 + 36 = 39."
+  },
+  {
+    id: 18,
+    category: "Logika",
+    question: "A lebih tua dari B. C lebih muda dari B. D lebih tua dari C tapi lebih muda dari B. Siapakah yang paling muda?",
+    options: ["A", "B", "C", "D"],
+    correctAnswer: "C",
+    solution: "Urutan dari tertua: A > B > D > C. Maka yang paling muda adalah C."
+  },
+  {
+    id: 19,
+    category: "Kombinatorika",
+    question: "Peluang munculnya jumlah mata dadu 7 pada pelemparan dua dadu secara bersamaan adalah...",
+    options: ["1/6", "1/12", "5/36", "7/36"],
+    correctAnswer: "1/6",
+    solution: "Pasangan jumlah 7: (1,6), (2,5), (3,4), (4,3), (5,2), (6,1) -> 6 pasang. Total ruang sampel = 36. Peluang = 6/36 = 1/6."
+  },
+  {
+    id: 20,
+    category: "Teori Bilangan",
+    question: "Bilangan prima antara 40 dan 50 adalah...",
+    options: ["41, 43, 47", "41, 43, 49", "43, 47, 49", "41, 47"],
+    correctAnswer: "41, 43, 47",
+    solution: "41, 43, dan 47 adalah bilangan prima. 49 bukan prima karena 7 x 7 = 49."
+  }
+];
+
+export default function App() {
+  const [appState, setAppState] = useState('landing'); 
+  const [userName, setUserName] = useState('');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState([]);
+  const [showSolution, setShowSolution] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [score, setScore] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fungsi untuk mengirim data ke Google Form
+  const sendDataToGoogleForm = async (finalScore, answers) => {
+    if (!GOOGLE_FORM_CONFIG.formId) {
+        console.warn("Google Form ID belum diisi.");
+        return;
+    }
+
+    const detailJawaban = answers.map((ans, i) => `Q${i+1}:${ans.isCorrect ? 'Y' : 'N'}`).join(', ');
+    
+    const formUrl = `https://docs.google.com/forms/d/e/${GOOGLE_FORM_CONFIG.formId}/formResponse`;
+    const formData = new FormData();
+    
+    formData.append(GOOGLE_FORM_CONFIG.entryIds.nama, userName);
+    formData.append(GOOGLE_FORM_CONFIG.entryIds.skor, finalScore.toString());
+    formData.append(GOOGLE_FORM_CONFIG.entryIds.jawaban, detailJawaban);
+
+    try {
+      // Menggunakan mode 'no-cors' karena Google Form tidak mengembalikan header CORS
+      await fetch(formUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: formData
+      });
+      console.log("Data berhasil dikirim ke Google Form.");
+    } catch (error) {
+      console.error("Gagal mengirim data:", error);
+    }
+  };
+
+  const startQuiz = (e) => {
+    e.preventDefault();
+    if (userName.trim()) {
+      setAppState('quiz');
+    }
+  };
+
+  const handleOptionSelect = (option) => {
+    if (showSolution) return;
+    setSelectedOption(option);
+  };
+
+  const submitAnswer = () => {
+    const isCorrect = selectedOption === QUESTION_BANK[currentQuestionIndex].correctAnswer;
+    const currentScore = isCorrect ? score + 1 : score;
+    if (isCorrect) setScore(currentScore);
+    
+    setUserAnswers([...userAnswers, {
+      questionId: QUESTION_BANK[currentQuestionIndex].id,
+      selected: selectedOption,
+      isCorrect
+    }]);
+    
+    setShowSolution(true);
+  };
+
+  const nextQuestion = async () => {
+    if (currentQuestionIndex < QUESTION_BANK.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setSelectedOption(null);
+      setShowSolution(false);
+    } else {
+      // Sebelum pindah ke result, kirim data
+      setIsSubmitting(true);
+      const finalScoreValue = Math.round((score / QUESTION_BANK.length) * 100);
+      await sendDataToGoogleForm(finalScoreValue, userAnswers);
+      setIsSubmitting(false);
+      setAppState('result');
+    }
+  };
+
+  const resetQuiz = () => {
+    setAppState('landing');
+    setUserName('');
+    setCurrentQuestionIndex(0);
+    setUserAnswers([]);
+    setScore(0);
+    setSelectedOption(null);
+    setShowSolution(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans p-4 md:p-8 flex items-center justify-center">
+      <div className="max-w-3xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200">
+        
+        {/* Header Section */}
+        <div className="bg-indigo-700 p-6 text-white flex justify-between items-center shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-2 rounded-lg">
+              <BookOpen size={28} />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">OSN Math Challenge</h1>
+              <p className="text-indigo-200 text-xs font-medium uppercase tracking-widest">Integrasi Google Form</p>
+            </div>
+          </div>
+          {appState === 'quiz' && (
+            <div className="bg-indigo-600 px-4 py-2 rounded-2xl text-sm font-bold border border-indigo-400">
+              {currentQuestionIndex + 1} / {QUESTION_BANK.length}
+            </div>
+          )}
+        </div>
+
+        {/* Main Content */}
+        <div className="p-6 md:p-10">
+          
+          {appState === 'landing' && (
+            <div className="space-y-8 text-center animate-in fade-in zoom-in duration-500">
+              <div className="bg-indigo-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto ring-8 ring-indigo-50/50">
+                <User className="text-indigo-600" size={48} />
+              </div>
+              <div className="space-y-3">
+                <h2 className="text-3xl font-black text-slate-800">Siap Jadi Juara?</h2>
+                <p className="text-slate-500 max-w-sm mx-auto">Tantang dirimu dengan 20 soal pilihan terbaik. Hasil pengerjaan akan direkap otomatis.</p>
+              </div>
+              <form onSubmit={startQuiz} className="space-y-4 max-w-sm mx-auto">
+                <div className="relative">
+                   <input
+                    type="text"
+                    placeholder="Tulis namamu di sini..."
+                    className="w-full px-6 py-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 outline-none transition-all text-center font-bold text-lg shadow-sm"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl shadow-xl shadow-indigo-200 transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3"
+                >
+                  Mulai Latihan <ChevronRight size={24} />
+                </button>
+              </form>
+            </div>
+          )}
+
+          {appState === 'quiz' && (
+            <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+                <span className="bg-indigo-100 text-indigo-700 text-xs font-black px-3 py-1 rounded-full uppercase">
+                  Materi: {QUESTION_BANK[currentQuestionIndex].category}
+                </span>
+                <span className="text-slate-400 text-xs font-bold uppercase tracking-tighter">
+                  Soal ID: #{QUESTION_BANK[currentQuestionIndex].id}
+                </span>
+              </div>
+              
+              <div className="text-xl md:text-2xl font-bold leading-snug text-slate-800 min-h-[100px]">
+                {QUESTION_BANK[currentQuestionIndex].question}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {QUESTION_BANK[currentQuestionIndex].options.map((option, idx) => (
+                  <button
+                    key={idx}
+                    disabled={showSolution}
+                    onClick={() => handleOptionSelect(option)}
+                    className={`text-left p-5 rounded-2xl border-2 transition-all flex justify-between items-center group ${
+                      selectedOption === option 
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-4 ring-indigo-50' 
+                        : 'border-slate-100 hover:border-indigo-200 hover:bg-slate-50'
+                    } ${
+                      showSolution && option === QUESTION_BANK[currentQuestionIndex].correctAnswer 
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-4 ring-emerald-50' 
+                        : ''
+                    } ${
+                      showSolution && selectedOption === option && option !== QUESTION_BANK[currentQuestionIndex].correctAnswer
+                        ? 'border-rose-500 bg-rose-50 text-rose-700 ring-4 ring-rose-50'
+                        : ''
+                    }`}
+                  >
+                    <span className="font-bold text-lg">{option}</span>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                       {showSolution && option === QUESTION_BANK[currentQuestionIndex].correctAnswer && <CheckCircle2 className="text-emerald-500" size={24} />}
+                       {showSolution && selectedOption === option && option !== QUESTION_BANK[currentQuestionIndex].correctAnswer && <XCircle className="text-rose-500" size={24} />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {!showSolution ? (
+                <button
+                  onClick={submitAnswer}
+                  disabled={!selectedOption}
+                  className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-lg ${
+                    selectedOption 
+                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100' 
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  Kunci Jawaban
+                </button>
+              ) : (
+                <div className="space-y-5 animate-in fade-in duration-500">
+                  <div className="p-6 bg-slate-900 text-slate-100 rounded-3xl border-l-8 border-yellow-400 shadow-xl">
+                    <h4 className="font-black text-yellow-400 flex items-center gap-2 mb-3 text-sm uppercase tracking-widest">
+                      <Lightbulb size={20} /> Langkah Pengerjaan:
+                    </h4>
+                    <p className="text-slate-300 text-base leading-relaxed">
+                      {QUESTION_BANK[currentQuestionIndex].solution}
+                    </p>
+                  </div>
+                  <button
+                    onClick={nextQuestion}
+                    disabled={isSubmitting}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-5 rounded-2xl shadow-xl flex items-center justify-center gap-2 text-xl disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Mengirim Data...' : (currentQuestionIndex === QUESTION_BANK.length - 1 ? 'Selesaikan & Kirim' : 'Soal Selanjutnya')} 
+                    {!isSubmitting && <ChevronRight size={28} />}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Result State */}
+          {appState === 'result' && (
+            <div className="text-center space-y-8 py-4 animate-in zoom-in duration-500">
+              <div className="relative inline-block">
+                 <div className="bg-yellow-100 w-32 h-32 rounded-full flex items-center justify-center mx-auto border-8 border-white shadow-xl">
+                    <Trophy className="text-yellow-600" size={64} />
+                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-4xl font-black text-slate-800">Hebat, {userName}!</h2>
+                <p className="text-slate-500 font-medium">Hasilmu telah berhasil direkap dan dikirimkan.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-indigo-700 p-6 rounded-3xl text-white shadow-lg shadow-indigo-100">
+                  <p className="text-xs font-black uppercase opacity-70 mb-2">Skor Akhir</p>
+                  <p className="text-5xl font-black">{Math.round((score / QUESTION_BANK.length) * 100)}</p>
+                </div>
+                <div className="bg-white border-2 border-slate-100 p-6 rounded-3xl text-slate-800 shadow-sm">
+                  <p className="text-xs font-black uppercase text-slate-400 mb-2">Benar</p>
+                  <p className="text-5xl font-black text-emerald-600">{score}</p>
+                </div>
+                <div className="bg-white border-2 border-slate-100 p-6 rounded-3xl text-slate-800 shadow-sm">
+                  <p className="text-xs font-black uppercase text-slate-400 mb-2">Salah</p>
+                  <p className="text-5xl font-black text-rose-500">{QUESTION_BANK.length - score}</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                <h3 className="font-bold text-slate-700 mb-4 flex items-center justify-center gap-2">
+                  <ClipboardList size={20} /> Ringkasan Jawaban
+                </h3>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {userAnswers.map((ans, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs border-2 shadow-sm ${ans.isCorrect ? 'bg-emerald-500 border-emerald-600 text-white' : 'bg-rose-500 border-rose-600 text-white'}`}
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={resetQuiz}
+                className="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-5 rounded-2xl transition-all shadow-xl flex items-center justify-center gap-3 text-xl"
+              >
+                <RefreshCw size={24} /> Ulangi dari Awal
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-10 py-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+           <div className="flex items-center gap-2 text-slate-400">
+              <div className={`w-3 h-3 rounded-full ${appState === 'quiz' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Rekap: Otomatis
+              </span>
+           </div>
+           {userName && (
+             <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 flex items-center gap-2">
+               <Send size={12} /> {userName.toUpperCase()}
+             </span>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+}
